@@ -1,6 +1,6 @@
 ---
 - name: Hola Mundo con Ansible
-  hosts: localhost
+  hosts: 192.168.40.130
   tasks:
     - name: Imprimir Hola Mundo
       debug:
