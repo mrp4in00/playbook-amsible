@@ -1,0 +1,6 @@
+---
+- name: Creando Directorio
+  hosts: all
+  tasks:
+    - name: Creacion de directorio
+      ansible.builtin.command: /usr/bin/mkdir {{ txt_nombredirectorio }} 
