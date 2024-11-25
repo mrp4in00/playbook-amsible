@@ -1,6 +1,6 @@
 ---
 - name: Creando Directorio
-  hosts: all
+  hosts: 192.168.40.130
   tasks:
     - name: Creacion de directorio
       ansible.builtin.command: /usr/bin/mkdir {{ txt_nombredirectorio }} 
