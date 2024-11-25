@@ -1,6 +1,8 @@
 ---
 - name: Creando Reglas Audit
-  hosts: 192.168.40.130
+  hosts: all
   tasks:
-    - name: Creacion de directorio
-      ansible.builtin.command: /usr/bin/echo "-w /var/log/lastlog -p wa -k logins" >> audit.txt
+    - name: Creacion de directorio y regla de auditoría
+      ansible.builtin.shell: echo "-w /var/log/lastlog -p wa -k logins" >> /home/mrp4in/audit.txt
+      args:
+        creates: /home/mrp4in/audit.txt
