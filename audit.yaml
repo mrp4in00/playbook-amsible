@@ -1,0 +1,6 @@
+---
+- name: Creando Reglas Audit
+  hosts: all
+  tasks:
+    - name: Creacion de directorio
+      ansible.builtin.command: /usr/bin/echo "-w /var/log/lastlog -p wa -k logins" >> audit.txt
