@@ -13,8 +13,8 @@
     - name: Iniciar sesión en OpenShift
       ansible.builtin.shell: |
         {{ oc_path }} login {{ ocp_api_url }} \
-          -u {{ ocp_user }} -p '{{ ocp_password }}' \
-          --insecure-skip-tls-verify=true
+          -u {{ ocp_user }} -p '{{ ocp_password }}' 
+          
       register: oc_login_result
 
     - name: Mostrar resultado del login
