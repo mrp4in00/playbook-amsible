@@ -1,1 +1,32 @@
+---
+- name: Ejecutar oc login desde el bastion con privilegios
+  hosts: 10.10.107.110
+  gather_facts: no
+  become: true
+  vars:
+    ocp_api_url: https://api.ocp.home.local:6443
+    ocp_user: kubeadmin
+    ocp_password: 5YtTc-j5d4h-EPXg7-YLrEp
+    oc_path: /usr/local/bin/oc   # Ajusta si está en otra ruta
+
+  tasks:
+    - name: Iniciar sesión en OpenShift
+      ansible.builtin.shell: |
+        {{ oc_path }} login {{ ocp_api_url }} \
+          -u {{ ocp_user }} -p '{{ ocp_password }}' \
+          --insecure-skip-tls-verify=true
+      register: oc_login_result
+
+    - name: Mostrar resultado del login
+      debug:
+        var: oc_login_result.stdout
+
+    - name: Verificar usuario autenticado
+      ansible.builtin.shell: "{{ oc_path }} whoami"
+      register: oc_whoami
+      changed_when: false
+
+    - name: Mostrar usuario autenticado
+      debug:
+        msg: "Usuario autenticado: {{ oc_whoami.stdout }}"
 
