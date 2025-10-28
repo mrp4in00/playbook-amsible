@@ -1,0 +1,55 @@
+---
+- name: Crear nueva VM en vCenter desde cero
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - community.vmware
+
+  vars:
+    # Datos de vCenter
+    vcenter_hostname: "10.10.107.101"
+    vcenter_username: "administrator@vsphere.local"
+    vcenter_password: "VMware123#VMware123#"
+
+    # Datos de la VM
+    datacenter_name: "DC_LT_LAB"
+    cluster_name: "esxi01.laboratorio.mx"
+    datastore_name: "DS_POWERVAULT_CORE"
+    network_name: "VM Network"
+    folder_name: "Daniel_G"
+    vm_name: "vm-ansible-demo"
+    vm_cpu: 2
+    vm_memory_mb: 4096       # 4 GB de RAM
+    vm_disk_gb: 40
+    vm_guest_id: "centos7_64Guest"   # Tipo de OS virtual (ajusta según tu SO)
+    # Red DHCP, sin IP asignada aún
+    wait_for_ip_address: no
+
+  tasks:
+    - name: Crear nueva VM desde cero
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        datacenter: "{{ datacenter_name }}"
+        cluster: "{{ cluster_name }}"
+        folder: "{{ folder_name }}"
+        name: "{{ vm_name }}"
+        state: poweredon
+        hardware:
+          memory_mb: "{{ vm_memory_mb }}"
+          num_cpus: "{{ vm_cpu }}"
+        disks:
+          - size_gb: "{{ vm_disk_gb }}"
+            type: thin
+            datastore: "{{ datastore_name }}"
+        networks:
+          - name: "{{ network_name }}"
+            type: dhcp
+        guest_id: "{{ vm_guest_id }}"
+        wait_for_ip_address: "{{ wait_for_ip_address }}"
+
+    - name: Mostrar información de la VM creada
+      debug:
+        msg: "La VM {{ vm_name }} se creó en el folder {{ folder_name }} con {{ vm_cpu }} vCPU y {{ vm_memory_mb }} MB RAM, disco {{ vm_disk_gb }} GB."
