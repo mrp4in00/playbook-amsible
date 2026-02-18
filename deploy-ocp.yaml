@@ -86,7 +86,7 @@
                       password: 'c0i7-cwi7-m8u8'
                       chpasswd: { expire: False }
                       runcmd:
-                        - nmcli connection add type ethernet con-name vlan115 ifname eth1 ipv4.method static ipv4.addresses 10.10.107.52/24
+                        - nmcli connection add type ethernet con-name vlan115 ifname eth1 ipv4.method static ipv4.addresses 10.10.115.52/24
                         - nmcli connection up vlan115
                         - subscription-manager register --username "{{ rh_user }}" --password "{{ rh_password }}" --auto-attach
                   name: cloudinitdisk
