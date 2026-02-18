@@ -6,7 +6,7 @@
   vars:
     ocp_api_url: https://api.ocp.home.local:6443
     ocp_user: kubeadmin
-    ocp_password: 5YtTc-j5d4h-EPXg7-YLrEp
+    ocp_password: qPHJe-VcHgk-f8EHR-xdNDh
     oc_path: /usr/local/bin/oc   # Ajusta si está en otra ruta
 
   tasks:
