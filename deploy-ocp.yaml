@@ -1,5 +1,5 @@
 ---
-- name: Ejecutar oc login desde el bastion con privilegios
+- name: Login en OCP y Creación de VM RHEL8 con Registro
   hosts: 10.10.107.110
   gather_facts: no
   become: true
@@ -7,26 +7,100 @@
     ocp_api_url: https://api.ocp.home.local:6443
     ocp_user: kubeadmin
     ocp_password: qPHJe-VcHgk-f8EHR-xdNDh
-    oc_path: /usr/local/bin/oc   # Ajusta si está en otra ruta
+    oc_path: /usr/local/bin/oc
+    # Datos de la VM y Suscripción
+    vm_name: "ansible-vm"
+    rh_user: "daniel.galicia@moxy-it.com.mx"
+    rh_password: "8qHLJ:aULWa:Y5d"
 
   tasks:
-    - name: Iniciar sesión en OpenShift
+    - name: 1. Iniciar sesión en OpenShift
       ansible.builtin.shell: |
         {{ oc_path }} login {{ ocp_api_url }} \
-          -u {{ ocp_user }} -p '{{ ocp_password }}' 
-          
+          -u {{ ocp_user }} -p '{{ ocp_password }}' --insecure-skip-tls-verify
       register: oc_login_result
 
-    - name: Mostrar resultado del login
-      debug:
-        var: oc_login_result.stdout
-
-    - name: Verificar usuario autenticado
+    - name: 2. Verificar usuario autenticado
       ansible.builtin.shell: "{{ oc_path }} whoami"
       register: oc_whoami
       changed_when: false
 
-    - name: Mostrar usuario autenticado
-      debug:
-        msg: "Usuario autenticado: {{ oc_whoami.stdout }}"
+    - name: 3. Crear Máquina Virtual con Multus y Suscripción
+      ansible.builtin.shell: |
+        cat <<EOF | {{ oc_path }} apply -f -
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: {{ vm_name }}
+          namespace: default
+        spec:
+          runStrategy: Always
+          dataVolumeTemplates:
+            - metadata:
+                name: rhel-8-ansible-volume
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: rhel8
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  resources:
+                    requests:
+                      storage: 30Gi
+          template:
+            metadata:
+              labels:
+                network.kubevirt.io/headlessService: headless
+            spec:
+              nodeSelector:
+                kubernetes.io/hostname: worker06.ocp.home.local
+              domain:
+                cpu:
+                  cores: 2
+                resources:
+                  requests:
+                    memory: 4Gi
+                devices:
+                  disks:
+                    - disk:
+                        bus: virtio
+                      name: rootdisk
+                    - disk:
+                        bus: virtio
+                      name: cloudinitdisk
+                  interfaces:
+                    - masquerade: {}
+                      name: default
+                    - model: virtio
+                      name: nic-vlan115
+                      bridge: {}
+              networks:
+                - name: default
+                  pod: {}
+                - name: nic-vlan115
+                  multus:
+                    networkName: vlan115-net
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: rhel-8-ansible-volume
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |
+                      #cloud-config
+                      user: rhel
+                      password: 'c0i7-cwi7-m8u8'
+                      chpasswd: { expire: False }
+                      runcmd:
+                        - [ nmcli, connection, add, type, ethernet, con-name, vlan115, ifname, eth1, ipv4.method, static, ipv4.addresses, "10.10.107.52/24" ]
+                        - [ nmcli, connection, up, vlan115 ]
+                        - [ subscription-manager, register, --username, "{{ rh_user }}", --password, "{{ rh_password }}", --auto-attach ]
+        EOF
+      register: vm_creation
 
+    - name: 4. Confirmación de despliegue
+      debug:
+        msg: 
+          - "Login exitoso como: {{ oc_whoami.stdout }}"
+          - "La VM {{ vm_name }} ha sido enviada al cluster."
+          - "IP configurada: 10.10.107.52 en interface eth1 (Bridge)."
