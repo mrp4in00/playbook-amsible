@@ -1,5 +1,5 @@
 ---
-- name: Login en OCP y Creación de VM RHEL8 con Registro
+- name: Ejecutar oc login y crear VM en cluster-upi
   hosts: 10.10.107.110
   gather_facts: no
   become: true
@@ -8,10 +8,10 @@
     ocp_user: kubeadmin
     ocp_password: qPHJe-VcHgk-f8EHR-xdNDh
     oc_path: /usr/local/bin/oc
-    # Datos de la VM y Suscripción
-    vm_name: "ansible-vm"
+    # Datos de Registro Red Hat
     rh_user: "daniel.galicia@moxy-it.com.mx"
     rh_password: "8qHLJ:aULWa:Y5d"
+    target_ns: "cluster-upi"
 
   tasks:
     - name: 1. Iniciar sesión en OpenShift
@@ -20,24 +20,19 @@
           -u {{ ocp_user }} -p '{{ ocp_password }}' --insecure-skip-tls-verify
       register: oc_login_result
 
-    - name: 2. Verificar usuario autenticado
-      ansible.builtin.shell: "{{ oc_path }} whoami"
-      register: oc_whoami
-      changed_when: false
-
-    - name: 3. Crear Máquina Virtual con Multus y Suscripción
+    - name: 2. Crear VM ansible-vm en namespace cluster-upi
       ansible.builtin.shell: |
         cat <<EOF | {{ oc_path }} apply -f -
         apiVersion: kubevirt.io/v1
         kind: VirtualMachine
         metadata:
-          name: {{ vm_name }}
-          namespace: default
+          name: ansible-vm
+          namespace: {{ target_ns }}
         spec:
           runStrategy: Always
           dataVolumeTemplates:
             - metadata:
-                name: rhel-8-ansible-volume
+                name: ansible-vm-disk
               spec:
                 sourceRef:
                   kind: DataSource
@@ -72,35 +67,32 @@
                     - masquerade: {}
                       name: default
                     - model: virtio
-                      name: nic-vlan115
+                      name: nic-plum-yak-11
                       bridge: {}
               networks:
                 - name: default
                   pod: {}
-                - name: nic-vlan115
+                - name: nic-plum-yak-11
                   multus:
                     networkName: vlan115-net
               volumes:
-                - name: rootdisk
-                  dataVolume:
-                    name: rhel-8-ansible-volume
-                - name: cloudinitdisk
-                  cloudInitNoCloud:
+                - dataVolume:
+                    name: ansible-vm-disk
+                  name: rootdisk
+                - cloudInitNoCloud:
                     userData: |
                       #cloud-config
                       user: rhel
                       password: 'c0i7-cwi7-m8u8'
                       chpasswd: { expire: False }
                       runcmd:
-                        - [ nmcli, connection, add, type, ethernet, con-name, vlan115, ifname, eth1, ipv4.method, static, ipv4.addresses, "10.10.107.52/24" ]
-                        - [ nmcli, connection, up, vlan115 ]
-                        - [ subscription-manager, register, --username, "{{ rh_user }}", --password, "{{ rh_password }}", --auto-attach ]
+                        - nmcli connection add type ethernet con-name vlan115 ifname eth1 ipv4.method static ipv4.addresses 10.10.107.52/24
+                        - nmcli connection up vlan115
+                        - subscription-manager register --username "{{ rh_user }}" --password "{{ rh_password }}" --auto-attach
+                  name: cloudinitdisk
         EOF
       register: vm_creation
 
-    - name: 4. Confirmación de despliegue
+    - name: 3. Resultado
       debug:
-        msg: 
-          - "Login exitoso como: {{ oc_whoami.stdout }}"
-          - "La VM {{ vm_name }} ha sido enviada al cluster."
-          - "IP configurada: 10.10.107.52 en interface eth1 (Bridge)."
+        msg: "VM 'ansible-vm' creada correctamente en {{ target_ns }}. Registrando con la IP .52"
